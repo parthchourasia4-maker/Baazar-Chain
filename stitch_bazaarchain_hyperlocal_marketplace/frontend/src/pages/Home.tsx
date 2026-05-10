@@ -1,70 +1,92 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Pincode data with coordinates
+const PINCODE_DATA: Record<string, { name: string; lat: number; lng: number; sellers: number; trending: string[] }> = {
+  '400001': { name: 'Fort, Mumbai', lat: 18.9388, lng: 72.8354, sellers: 42, trending: ['Spices', 'Textiles', 'Handicrafts'] },
+  '400050': { name: 'Bandra West, Mumbai', lat: 19.0596, lng: 72.8295, sellers: 38, trending: ['Organic Foods', 'Fashion', 'Home Decor'] },
+  '110001': { name: 'Connaught Place, Delhi', lat: 28.6315, lng: 77.2167, sellers: 55, trending: ['Electronics', 'Street Food', 'Books'] },
+  '560001': { name: 'MG Road, Bengaluru', lat: 12.9716, lng: 77.5946, sellers: 48, trending: ['Silk', 'Flowers', 'Coffee'] },
+  '700001': { name: 'BBD Bagh, Kolkata', lat: 22.5726, lng: 88.3639, sellers: 35, trending: ['Sweets', 'Sarees', 'Pottery'] },
+  '500001': { name: 'Charminar, Hyderabad', lat: 17.3616, lng: 78.4747, sellers: 40, trending: ['Pearls', 'Bangles', 'Biryani Spices'] },
+  '600001': { name: 'George Town, Chennai', lat: 13.0827, lng: 80.2707, sellers: 33, trending: ['Silk', 'Jewelry', 'Groceries'] },
+  '302001': { name: 'Pink City, Jaipur', lat: 26.9124, lng: 75.7873, sellers: 60, trending: ['Gems', 'Block Print', 'Leather'] },
+  '452001': { name: 'Old City, Indore', lat: 22.7196, lng: 75.8577, sellers: 29, trending: ['Namkeen', 'Poha', 'Handicrafts'] },
+  '380001': { name: 'Lal Darwaja, Ahmedabad', lat: 23.0225, lng: 72.5714, sellers: 44, trending: ['Textiles', 'Kites', 'Snacks'] },
+};
 
 export default function Home() {
   const navigate = useNavigate();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletMap = useRef<L.Map | null>(null);
+
+  // Initialize the Leaflet map
+  useEffect(() => {
+    if (!mapRef.current || leafletMap.current) return;
+
+    const map = L.map(mapRef.current, {
+      center: [20.5937, 78.9629],
+      zoom: 5,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    leafletMap.current = map;
+
+    // Add markers for all known pincodes
+    Object.entries(PINCODE_DATA).forEach(([code, data]) => {
+      const marker = L.circleMarker([data.lat, data.lng], {
+        radius: 7,
+        fillColor: '#f97316',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.85,
+      }).addTo(map);
+      marker.bindPopup(`<b>${data.name}</b><br/>PIN: ${code}<br/>${data.sellers} sellers active`);
+    });
+
+    // Listen to saved location changes
+    const checkLocation = () => {
+      const saved = localStorage.getItem('bazaarchain_location');
+      if (saved) {
+        try {
+          const loc = JSON.parse(saved);
+          const data = PINCODE_DATA[loc.pincode];
+          if (data && leafletMap.current) {
+            leafletMap.current.flyTo([data.lat, data.lng], 13, { duration: 1.5 });
+          }
+        } catch {}
+      }
+    };
+    checkLocation();
+    window.addEventListener('storage', checkLocation);
+
+    return () => {
+      window.removeEventListener('storage', checkLocation);
+      map.remove();
+      leafletMap.current = null;
+    };
+  }, []);
 
   return (
     <div className="antialiased min-h-screen flex flex-col pt-24 bg-background text-on-background">
       <TopNavBar />
 
+      <main className="flex-grow max-w-[96rem] mx-auto w-full px-4 lg:px-8 grid grid-cols-1 xl:grid-cols-[1fr_22rem] gap-6">
 
-      <main className="flex-grow max-w-[90rem] mx-auto w-full px-container-padding grid grid-cols-1 lg:grid-cols-[16rem_1fr] xl:grid-cols-[16rem_1fr_20rem] gap-8">
-        {/* SideNavBar (Left) */}
-        <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 sticky top-28 h-[calc(100vh-8rem)]">
-          <div className="bg-surface-container-low dark:bg-inverse-surface bg-opacity-50 backdrop-blur-md shadow-xl rounded-3xl p-6 flex flex-col h-full">
-            <div className="mb-8">
-              <h2 className="font-display-bold text-headline-lg text-primary mb-1">Bazaar Categories</h2>
-              <p className="text-label-sm text-on-surface-variant">Shop Local, Grow Local</p>
-            </div>
-            <nav className="flex flex-col py-6 space-y-2 flex-grow overflow-y-auto hide-scrollbar">
-              <a className="bg-secondary-container text-on-secondary-container rounded-xl font-bold mx-2 my-1 flex items-center gap-3 p-3 hover:translate-x-1 transition-transform duration-200" href="#">
-                <span className="material-symbols-outlined">local_grocery_store</span>
-                <span className="font-title-md text-title-md">Groceries</span>
-              </a>
-              <a className="text-on-surface-variant hover:bg-surface-container-high rounded-xl mx-2 my-1 flex items-center gap-3 p-3 hover:translate-x-1 transition-transform duration-200" href="#">
-                <span className="material-symbols-outlined">checkroom</span>
-                <span className="font-title-md text-title-md">Fashion</span>
-              </a>
-              <a className="text-on-surface-variant hover:bg-surface-container-high rounded-xl mx-2 my-1 flex items-center gap-3 p-3 hover:translate-x-1 transition-transform duration-200" href="#">
-                <span className="material-symbols-outlined">devices</span>
-                <span className="font-title-md text-title-md">Electronics</span>
-              </a>
-              <a className="text-on-surface-variant hover:bg-surface-container-high rounded-xl mx-2 my-1 flex items-center gap-3 p-3 hover:translate-x-1 transition-transform duration-200" href="#">
-                <span className="material-symbols-outlined">home_app_logo</span>
-                <span className="font-title-md text-title-md">Home Decor</span>
-              </a>
-              <a className="text-on-surface-variant hover:bg-surface-container-high rounded-xl mx-2 my-1 flex items-center gap-3 p-3 hover:translate-x-1 transition-transform duration-200" href="#">
-                <span className="material-symbols-outlined">precision_manufacturing</span>
-                <span className="font-title-md text-title-md">Handicrafts</span>
-              </a>
-              <a className="text-on-surface-variant hover:bg-surface-container-high rounded-xl mx-2 my-1 flex items-center gap-3 p-3 hover:translate-x-1 transition-transform duration-200" href="#">
-                <span className="material-symbols-outlined">stars</span>
-                <span className="font-title-md text-title-md">Local Hero</span>
-              </a>
-            </nav>
-            <div className="mt-auto pt-6 border-t border-outline-variant/30 flex flex-col gap-2">
-              <button 
-                onClick={() => navigate('/product')}
-                className="w-full bg-primary-container text-white py-3 rounded-xl font-title-md text-title-md scale-95 active:scale-90 transition-transform shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:opacity-90"
-              >
-                Buy
-              </button>
-              <div className="flex justify-between mt-4 px-2">
-                <a className="text-on-surface-variant hover:text-primary flex flex-col items-center gap-1 hover:translate-x-1 transition-transform duration-200" href="#">
-                  <span className="material-symbols-outlined text-sm">help</span>
-                </a>
-                <a className="text-on-surface-variant hover:text-primary flex flex-col items-center gap-1 hover:translate-x-1 transition-transform duration-200" href="#">
-                  <span className="material-symbols-outlined text-sm">settings</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </aside>
+        {/* ========== CENTER FEED: Video Cards ========== */}
+        <section className="flex-grow flex flex-col items-center w-full max-w-xl mx-auto pb-24 order-1">
 
-        {/* Main Feed (Center) */}
-        <section className="flex-grow flex flex-col items-center w-full max-w-2xl mx-auto pb-24">
           {/* Video Card 1 */}
           <div className="w-full aspect-[9/16] bg-surface-container-high rounded-[32px] overflow-hidden relative shadow-[0_10px_30px_rgba(249,115,22,0.15)] mb-8 snap-center">
             <img alt="Fresh mangoes at market" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDSMucUrp2IZfBkbkMOVmhMRhRrh6JnJujZd-LTpE366fb74nyLClzgyZHiZKLX9HQAeRRlEPxfrLs6TGEPE2eqE926q39D2JxKi595Cgy87LX21yljxh2x2e8NZEIdG7tLW_35mqZNQroDO7fhNsXCq5xtzj5nW5HWoMkeFnHU1FmLOvkKYJ0jZkvIGsxxmkAnfDSqfYK_vpPGr8xVPppMLsKI9DMD9IA0AYdeZSFXvtShCU4EHfmrrU3OIVbbidEYycTg_S0XFWz" />
@@ -102,9 +124,7 @@ export default function Home() {
                 </div>
               </div>
               <button 
-                onClick={() => {
-                  navigate('/product');
-                }}
+                onClick={() => navigate('/product')}
                 className="w-full bg-primary-container text-white py-4 rounded-2xl font-title-md shadow-[0_10px_20px_rgba(249,115,22,0.4)] scale-95 active:scale-90 transition-transform hover:bg-primary"
               >
                 Buy
@@ -145,9 +165,7 @@ export default function Home() {
                 </div>
               </div>
               <button 
-                onClick={() => {
-                  navigate('/product');
-                }}
+                onClick={() => navigate('/product')}
                 className="w-full bg-primary-container text-white py-4 rounded-2xl font-title-md shadow-[0_10px_20px_rgba(249,115,22,0.4)] scale-95 active:scale-90 transition-transform hover:bg-primary"
               >
                 Buy
@@ -156,57 +174,91 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Right Sidebar (Live in Area) */}
-        <aside className="hidden xl:flex flex-col w-80 flex-shrink-0 sticky top-28 h-[calc(100vh-8rem)]">
-          <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-lg border border-outline-variant/20 flex flex-col h-full overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display-bold text-title-md text-on-surface">Live in Your Area</h2>
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary-container"></span>
-              </span>
-            </div>
-            {/* Map Widget Placeholder */}
-            <div className="w-full h-48 bg-surface-container-high rounded-2xl mb-6 relative overflow-hidden group border border-outline-variant/30">
-              <img alt="Map view" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1_yal7Uh46ttFz-nkO4Hra0E3rKBjj8SS-ekIrON57HXpSlr9GIL26bioJJrLKH-b_ByxbV3HnwnF6e75o2EFm6hYT1yjy6u7gm0Wkv8BJmRvE8E1rMtrUMCIOTjFs-7WskxrrAj1DwtoNtZxx3_FYwlgNq4W52UYE704UbjCq2mOTHxDC1aaAmMzEYgaGUEBg_bvQHqLVx2aMuULq8Un3e4t1nlsbZeDIPHINEObRvEzvyn42Cn9XhGkvYjyaGkh5x7v6sT4h_do" />
-              <div className="absolute inset-0 bg-gradient-to-t from-surface-container-highest/90 to-transparent"></div>
-              <div className="absolute bottom-3 left-3 right-3">
-                <div className="bg-surface/90 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">group</span>
-                    <span className="text-label-sm font-bold text-on-surface">5 Active Group Buys</span>
-                  </div>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[16px]">chevron_right</span>
-                </div>
+        {/* ========== RIGHT SIDEBAR: Map + Trending ========== */}
+        <aside className="hidden xl:flex flex-col w-full flex-shrink-0 sticky top-28 h-[calc(100vh-8rem)] gap-5 order-2">
+
+          {/* Interactive Map */}
+          <div className="flex-1 bg-surface-container-lowest rounded-3xl shadow-lg border border-outline-variant/20 overflow-hidden flex flex-col min-h-0">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant/20">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">map</span>
+                <h2 className="font-display-bold text-title-md text-on-surface">Live Bazaar Map</h2>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span className="text-label-sm text-on-surface-variant">{Object.keys(PINCODE_DATA).length} zones</span>
               </div>
             </div>
-            <div className="flex flex-col gap-4 overflow-y-auto hide-scrollbar flex-grow pb-4">
-              <h3 className="text-label-sm text-on-surface-variant uppercase tracking-wider font-bold">Trending Near You</h3>
+            <div ref={mapRef} className="flex-1 min-h-[280px] z-0" />
+          </div>
+
+          {/* Trending Near You */}
+          <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-lg border border-outline-variant/20">
+            <h3 className="font-display-bold text-title-md text-on-surface mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[20px]">trending_up</span>
+              Trending Near You
+            </h3>
+            <div className="flex flex-col gap-3">
               {/* Trending Item 1 */}
               <div className="flex gap-3 items-center p-3 rounded-2xl hover:bg-surface-container-low transition-colors cursor-pointer border border-transparent hover:border-outline-variant/30">
-                <img alt="Spices" className="w-16 h-16 rounded-xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjruOSyGIO7ipxJOizlsLC-9IQ9xtfB21sBRU4pIISTNBnyEXeylxWF6OgtBuB4tEuW8is32w3Jcda32R3LPf66oMX6QZKRuNNal7i9SEC69rob5k_EcWY9XMuRbw9M4Cgq-vYQ-CZUT-3LvqpjIFKMJhhkMnE-uAYqX7oskn9orQ6y6mpN_gG85o2DdmaN-IoSad7hKHzfApJlO-tEwfMgviC_pWrryokKmaHMg0MTUoJZIGDjf6wOG_JaoYIcToblMqCloLJTod9" />
-                <div className="flex-grow">
+                <img alt="Spices" className="w-14 h-14 rounded-xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjruOSyGIO7ipxJOizlsLC-9IQ9xtfB21sBRU4pIISTNBnyEXeylxWF6OgtBuB4tEuW8is32w3Jcda32R3LPf66oMX6QZKRuNNal7i9SEC69rob5k_EcWY9XMuRbw9M4Cgq-vYQ-CZUT-3LvqpjIFKMJhhkMnE-uAYqX7oskn9orQ6y6mpN_gG85o2DdmaN-IoSad7hKHzfApJlO-tEwfMgviC_pWrryokKmaHMg0MTUoJZIGDjf6wOG_JaoYIcToblMqCloLJTod9" />
+                <div className="flex-grow min-w-0">
                   <h4 className="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Premium Spices Pack</h4>
                   <p className="text-label-sm text-on-surface-variant">2.1 km away</p>
                 </div>
-                <div className="text-right">
-                  <span className="text-primary font-bold text-body-md">₹320</span>
-                </div>
+                <span className="text-primary font-bold text-body-md shrink-0">₹320</span>
               </div>
               {/* Trending Item 2 */}
               <div className="flex gap-3 items-center p-3 rounded-2xl hover:bg-surface-container-low transition-colors cursor-pointer border border-transparent hover:border-outline-variant/30">
-                <img alt="Fresh Flowers" className="w-16 h-16 rounded-xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOAPtxt4qEpVwMwUH9lfTB09c-mgS3qSFOFNeWz8pgiRWEpwgvHfcyONMjg5L7kf8IV5yWfppNX54nzpBGHZ5RWLWqqDK3ACH_Wfqjg0g1qxGA09lJNf_Icj_UGWncjQnW_s27wUjho3YV-wC3jyxFJLkF8Jfe9mvLQbMAdqx-W-3gqYwVsniQ-SobjIXcjBK2xhTkp9P9KdDKVeiYJLuJ0k1gXAkxgTqiAPLblE1J3Bt-KylbMRpUUDuGrTlJv2sUJQRlzbybtWn2" />
-                <div className="flex-grow">
+                <img alt="Fresh Flowers" className="w-14 h-14 rounded-xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOAPtxt4qEpVwMwUH9lfTB09c-mgS3qSFOFNeWz8pgiRWEpwgvHfcyONMjg5L7kf8IV5yWfppNX54nzpBGHZ5RWLWqqDK3ACH_Wfqjg0g1qxGA09lJNf_Icj_UGWncjQnW_s27wUjho3YV-wC3jyxFJLkF8Jfe9mvLQbMAdqx-W-3gqYwVsniQ-SobjIXcjBK2xhTkp9P9KdDKVeiYJLuJ0k1gXAkxgTqiAPLblE1J3Bt-KylbMRpUUDuGrTlJv2sUJQRlzbybtWn2" />
+                <div className="flex-grow min-w-0">
                   <h4 className="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Fresh Marigolds</h4>
                   <p className="text-label-sm text-on-surface-variant">0.8 km away</p>
                 </div>
-                <div className="text-right">
-                  <span className="text-primary font-bold text-body-md">₹150</span>
+                <span className="text-primary font-bold text-body-md shrink-0">₹150</span>
+              </div>
+              {/* Trending Item 3 */}
+              <div className="flex gap-3 items-center p-3 rounded-2xl hover:bg-surface-container-low transition-colors cursor-pointer border border-transparent hover:border-outline-variant/30">
+                <div className="w-14 h-14 rounded-xl bg-primary-container/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-primary text-[28px]">local_grocery_store</span>
                 </div>
+                <div className="flex-grow min-w-0">
+                  <h4 className="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Organic Vegetables</h4>
+                  <p className="text-label-sm text-on-surface-variant">1.5 km away</p>
+                </div>
+                <span className="text-primary font-bold text-body-md shrink-0">₹250</span>
               </div>
             </div>
           </div>
+
+          {/* Categories Quick Nav */}
+          <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-lg border border-outline-variant/20">
+            <h3 className="font-display-bold text-title-md text-on-surface mb-3">Categories</h3>
+            <nav className="grid grid-cols-3 gap-2">
+              {[
+                { icon: 'local_grocery_store', label: 'Groceries' },
+                { icon: 'checkroom', label: 'Fashion' },
+                { icon: 'devices', label: 'Electronics' },
+                { icon: 'home_app_logo', label: 'Decor' },
+                { icon: 'precision_manufacturing', label: 'Crafts' },
+                { icon: 'stars', label: 'Local Hero' },
+              ].map((cat) => (
+                <a
+                  key={cat.label}
+                  href="#"
+                  className="flex flex-col items-center gap-1 p-2.5 rounded-xl hover:bg-surface-container-high transition-colors text-on-surface-variant hover:text-primary"
+                >
+                  <span className="material-symbols-outlined text-[22px]">{cat.icon}</span>
+                  <span className="text-label-sm font-medium text-center leading-tight">{cat.label}</span>
+                </a>
+              ))}
+            </nav>
+          </div>
         </aside>
+
       </main>
 
       {/* Footer */}

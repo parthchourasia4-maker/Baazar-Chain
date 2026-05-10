@@ -1,7 +1,37 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [role, setRole] = useState<'customer' | 'seller'>('seller');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // Check if it's a gmail address
+    if (!email.toLowerCase().includes('@gmail.com')) {
+      setError('Please use a valid Gmail address (@gmail.com)');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    // Generate a special token
+    const token = btoa(`${email}:${role}:${Date.now()}-SPECIAL-TOKEN`);
+    localStorage.setItem('bazaarchain_token', token);
+    localStorage.setItem('user_role', role);
+    localStorage.setItem('user_email', email);
+
+    // Redirect after successful login
+    navigate('/');
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row font-body-md text-on-background">
@@ -74,46 +104,56 @@ export default function Login() {
           </div>
 
           {/* Form Box */}
-          <div className="bg-[#fcfcff] rounded-[2rem] p-6 md:p-8 shadow-sm border border-outline-variant/20 mb-8">
+          <form onSubmit={handleLogin} className="bg-[#fcfcff] rounded-[2rem] p-6 md:p-8 shadow-sm border border-outline-variant/20 mb-8">
             
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-lg border border-red-200">
+                {error}
+              </div>
+            )}
+
             <div className="mb-6">
-              <label className="block font-label-sm text-on-surface-variant mb-2">Mobile Number</label>
+              <label className="block font-label-sm text-on-surface-variant mb-2">Gmail Address</label>
               <div className="flex">
                 <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/60 rounded-l-lg px-4 py-3 border-r-0">
-                  <span className="text-lg">🇮🇳</span>
-                  <span className="font-body-md font-medium text-on-surface">+91</span>
+                  <span className="material-symbols-outlined text-on-surface-variant/70 text-[20px]">mail</span>
                 </div>
                 <input 
-                  type="tel" 
-                  placeholder="Enter 10 digit number" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your @gmail.com address" 
                   className="flex-1 bg-surface-container-lowest border border-outline-variant/60 rounded-r-lg px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary-container placeholder:text-on-surface-variant/40"
+                  required
                 />
               </div>
             </div>
 
             <div className="mb-8">
               <div className="flex justify-between items-center mb-2">
-                <label className="font-label-sm text-on-surface-variant">Enter 4-digit OTP</label>
-                <button className="font-label-sm text-secondary font-bold hover:underline">Resend OTP</button>
+                <label className="font-label-sm text-on-surface-variant">Password</label>
+                <a href="#" className="font-label-sm text-secondary font-bold hover:underline">Forgot?</a>
               </div>
-              <div className="flex gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <input 
-                    key={i}
-                    type="password" 
-                    maxLength={1}
-                    className="w-full aspect-square bg-surface-container-lowest border border-outline-variant/60 rounded-xl text-center text-3xl font-bold focus:outline-none focus:border-primary-container text-on-surface-variant pb-2"
-                    placeholder="•"
-                  />
-                ))}
+              <div className="flex">
+                <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/60 rounded-l-lg px-4 py-3 border-r-0">
+                  <span className="material-symbols-outlined text-on-surface-variant/70 text-[20px]">lock</span>
+                </div>
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password" 
+                  className="flex-1 bg-surface-container-lowest border border-outline-variant/60 rounded-r-lg px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary-container placeholder:text-on-surface-variant/40"
+                  required
+                />
               </div>
             </div>
 
-            <button className="w-full bg-primary text-on-primary py-4 rounded-full font-title-md font-bold flex justify-center items-center gap-2 hover:bg-primary/90 transition-colors shadow-md">
-              One-tap Login
+            <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-full font-title-md font-bold flex justify-center items-center gap-2 hover:bg-primary/90 transition-colors shadow-md">
+              Login to BazaarChain
               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </button>
-          </div>
+          </form>
 
           <div className="flex items-center justify-center gap-2 text-on-surface-variant font-label-sm text-xs">
             <span className="material-symbols-outlined text-[16px] text-secondary" style={{ fontVariationSettings: "'FILL' 0" }}>verified_user</span>
